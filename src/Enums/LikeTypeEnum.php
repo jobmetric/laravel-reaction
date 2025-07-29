@@ -2,14 +2,14 @@
 
 namespace JobMetric\Like\Enums;
 
-use JobMetric\PackageCore\Enums\EnumToArray;
+use JobMetric\PackageCore\Enums\EnumMacros;
 
 /**
  * @method static LIKE()
  * @method static DISLIKE()
  */
 enum LikeTypeEnum : string {
-    use EnumToArray;
+    use EnumMacros;
 
     case LIKE = "like";
     case DISLIKE = "dislike";
