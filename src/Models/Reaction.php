@@ -1,14 +1,16 @@
 <?php
 
-namespace JobMetric\Like\Models;
+namespace JobMetric\Reaction\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Query\Builder as BuilderQuery;
+use JobMetric\Reaction\Exceptions\InvalidReactionSourceException;
 
 /**
  * Class Reaction
@@ -20,8 +22,8 @@ use Illuminate\Database\Query\Builder as BuilderQuery;
  * @property int $id
  * @property string|null $liker_type The class name of the reacting user (polymorphic).
  * @property int|null $liker_id The ID of the reacting user (polymorphic).
- * @property string $likeable_type The class name of the target model being reacted to.
- * @property int $likeable_id The ID of the target model being reacted to.
+ * @property string $reactable_type The class name of the target model being reacted to.
+ * @property int $reactable_id The ID of the target model being reacted to.
  * @property string $reaction The type of reaction (e.g. like, dislike, love, etc.).
  * @property string|null $ip The IP address from which the reaction was made.
  * @property string|null $device_id Optional device identifier.
@@ -31,12 +33,12 @@ use Illuminate\Database\Query\Builder as BuilderQuery;
  * @property Carbon|null $updated_at Timestamp of last update.
  *
  * @property-read Model $liker The user or entity who made the reaction.
- * @property-read Model $likeable The model that was reacted to.
+ * @property-read Model $reactable The model that was reacted to.
  *
  * @method static Builder|Reaction whereLikerType($value)
  * @method static Builder|Reaction whereLikerId($value)
- * @method static Builder|Reaction whereLikeableType($value)
- * @method static Builder|Reaction whereLikeableId($value)
+ * @method static Builder|Reaction whereReactableType($value)
+ * @method static Builder|Reaction whereReactableId($value)
  * @method static Builder|Reaction whereReaction($value)
  * @method static Builder|Reaction whereIp($value)
  * @method static Builder|Reaction whereDeviceId($value)
@@ -47,7 +49,7 @@ use Illuminate\Database\Query\Builder as BuilderQuery;
  */
 class Reaction extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Prunable;
 
     /**
      * The attributes that are mass assignable.
@@ -57,8 +59,8 @@ class Reaction extends Model
     protected $fillable = [
         'liker_type',
         'liker_id',
-        'likeable_type',
-        'likeable_id',
+        'reactable_type',
+        'reactable_id',
         'reaction',
         'ip',
         'device_id',
@@ -73,8 +75,8 @@ class Reaction extends Model
     protected $casts = [
         'liker_type' => 'string',
         'liker_id' => 'integer',
-        'likeable_type' => 'string',
-        'likeable_id' => 'integer',
+        'reactable_type' => 'string',
+        'reactable_id' => 'integer',
         'reaction' => 'string',
         'ip' => 'string',
         'device_id' => 'string',
@@ -91,6 +93,11 @@ class Reaction extends Model
         return config('reaction.tables.reaction', parent::getTable());
     }
 
+    /**
+     * Boot the model and set up event listeners.
+     *
+     * @return void
+     */
     protected static function booted(): void
     {
         static::creating(function (Reaction $reaction) {
@@ -98,9 +105,19 @@ class Reaction extends Model
             $hasDevice = filled($reaction->device_id);
 
             if (!$hasLiker && !$hasDevice) {
-                throw new InvalidReactionSourceException();
+                throw new InvalidReactionSourceException;
             }
         });
+    }
+
+    /**
+     * Prune old reactions.
+     *
+     * @return Builder
+     */
+    public function prunable(): Builder
+    {
+        return static::where('deleted_at', '<=', now()->subDays(config('reaction.prune_days', 30)));
     }
 
     /**
@@ -114,11 +131,11 @@ class Reaction extends Model
     }
 
     /**
-     * Get the parent likeable model (morph-to relation).
+     * Get the parent reactable model (morph-to relation).
      *
      * @return MorphTo
      */
-    public function likeable(): MorphTo
+    public function reactable(): MorphTo
     {
         return $this->morphTo();
     }
