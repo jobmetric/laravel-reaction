@@ -14,4 +14,14 @@ return [
         'reaction' => 'reactions'
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Prune Days
+    |--------------------------------------------------------------------------
+    |
+    | Number of days to keep reactions before pruning.
+    */
+
+    "prune_days" => env('REACTION_PRUNE_DAYS', 30),
+
 ];
