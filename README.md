@@ -1,11 +1,11 @@
-[contributors-shield]: https://img.shields.io/github/contributors/jobmetric/laravel-like.svg?style=for-the-badge
-[contributors-url]: https://github.com/jobmetric/laravel-like/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/jobmetric/laravel-like.svg?style=for-the-badge&label=Fork
-[forks-url]: https://github.com/jobmetric/laravel-like/network/members
-[stars-shield]: https://img.shields.io/github/stars/jobmetric/laravel-like.svg?style=for-the-badge
-[stars-url]: https://github.com/jobmetric/laravel-like/stargazers
-[license-shield]: https://img.shields.io/github/license/jobmetric/laravel-like.svg?style=for-the-badge
-[license-url]: https://github.com/jobmetric/laravel-like/blob/master/LICENCE.md
+[contributors-shield]: https://img.shields.io/github/contributors/jobmetric/laravel-reaction.svg?style=for-the-badge
+[contributors-url]: https://github.com/jobmetric/laravel-reaction/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/jobmetric/laravel-reaction.svg?style=for-the-badge&label=Fork
+[forks-url]: https://github.com/jobmetric/laravel-reaction/network/members
+[stars-shield]: https://img.shields.io/github/stars/jobmetric/laravel-reaction.svg?style=for-the-badge
+[stars-url]: https://github.com/jobmetric/laravel-reaction/stargazers
+[license-shield]: https://img.shields.io/github/license/jobmetric/laravel-reaction.svg?style=for-the-badge
+[license-url]: https://github.com/jobmetric/laravel-reaction/blob/master/LICENCE.md
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-blue.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/majidmohammadian
 
@@ -15,15 +15,15 @@
 [![MIT License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
-# Like for laravel
+# Reaction for laravel
 
-This is a like management package for Laravel that you can use in your projects.
+This is a reaction management package for Laravel that you can use in your projects.
 
 ## Install via composer
 
 Run the following command to pull in the latest version:
 ```bash
-composer require jobmetric/laravel-like
+composer require jobmetric/laravel-reaction
 ```
 
 ## Documentation
@@ -45,7 +45,7 @@ Meet the `HasLike` class, meticulously designed for integration into your model.
 In the first step, you need to connect this class to your main model.
 
 ```php
-use JobMetric\Like\HasLike;
+use JobMetric\Reaction\HasLike;
 
 class Post extends Model
 {
@@ -142,9 +142,9 @@ is liked or disliked by user
 ```php
 $type = $post->isLikedDislikedBy($user_id);
 
-if(\JobMetric\Like\Enums\LikeTypeEnum::LIKE == $type) {
+if(\JobMetric\Reaction\Enums\LikeTypeEnum::LIKE == $type) {
     // liked
-} else if(\JobMetric\Like\Enums\LikeTypeEnum::DISLIKE == $type) {
+} else if(\JobMetric\Reaction\Enums\LikeTypeEnum::DISLIKE == $type) {
     // disliked
 } else {
     // not liked or disliked
@@ -169,8 +169,8 @@ $post->forgetLikes();
 
 ## Contributing
 
-Thank you for considering contributing to the Laravel Like! The contribution guide can be found in the [CONTRIBUTING.md](https://github.com/jobmetric/laravel-like/blob/master/CONTRIBUTING.md).
+Thank you for considering contributing to the Laravel Reaction! The contribution guide can be found in the [CONTRIBUTING.md](https://github.com/jobmetric/laravel-reaction/blob/master/CONTRIBUTING.md).
 
 ## License
 
-The MIT License (MIT). Please see [License File](https://github.com/jobmetric/laravel-like/blob/master/LICENCE.md) for more information.
+The MIT License (MIT). Please see [License File](https://github.com/jobmetric/laravel-reaction/blob/master/LICENCE.md) for more information.
