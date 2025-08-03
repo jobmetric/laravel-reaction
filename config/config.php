@@ -11,7 +11,7 @@ return [
     */
 
     "tables" => [
-        'like' => 'likes'
+        'reaction' => 'reactions'
     ],
 
 ];
