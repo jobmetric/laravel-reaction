@@ -1,16 +1,22 @@
 {
-    "name": "jobmetric/laravel-like",
-    "description": "This is a like management package for Laravel that you can use in your projects.",
+    "name": "jobmetric/laravel-reaction",
+    "description": "This is a reaction management package for Laravel that you can use in your projects.",
     "type": "library",
     "license": "MIT",
     "keywords": [
         "laravel",
         "jobmetric",
         "package",
+        "reaction",
         "like",
-        "management"
+        "dislike",
+        "reaction management",
+        "reaction system",
+        "like system",
+        "dislike system",
+        "social interaction"
     ],
-    "homepage": "https://doc.jobmetric.net/package/laravel-like",
+    "homepage": "https://doc.jobmetric.net/package/laravel-reaction",
     "authors": [
         {
             "name": "Majid Mohammadian",
@@ -26,21 +32,21 @@
     },
     "autoload": {
         "psr-4": {
-            "JobMetric\\Like\\": "src/",
-            "JobMetric\\Like\\Factories\\": "database/factories/"
+            "JobMetric\\Reaction\\": "src/",
+            "JobMetric\\Reaction\\Factories\\": "database/factories/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "JobMetric\\Like\\LikeServiceProvider"
+                "JobMetric\\Reaction\\ReactionServiceProvider"
             ]
         }
     },
     "minimum-stability": "stable",
     "support": {
-        "issues": "https://github.com/jobmetric/laravel-like/issues",
+        "issues": "https://github.com/jobmetric/laravel-reaction/issues",
         "forum": "https://twitter.com/jobmetric",
-        "source": "https://github.com/jobmetric/laravel-like"
+        "source": "https://github.com/jobmetric/laravel-reaction"
     }
 }
