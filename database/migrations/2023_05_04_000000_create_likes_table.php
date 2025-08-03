@@ -33,7 +33,7 @@ return new class extends Migration {
             $table->nullableMorphs('liker');
             // Entity who made the reaction (e.g., User, Admin)
 
-            $table->morphs('likeable');
+            $table->morphs('reactable');
             // Entity being reacted to (e.g., Post, Comment)
 
             $table->string('reaction')->default('like');
@@ -55,16 +55,16 @@ return new class extends Migration {
             $table->unique([
                 'liker_type',
                 'liker_id',
-                'likeable_type',
-                'likeable_id'
+                'reactable_type',
+                'reactable_id'
             ], 'UNIQUE_LIKE');
             // Ensure a liker can't react multiple times to the same likeable entity
 
             $table->index([
-                'likeable_type',
-                'likeable_id',
+                'reactable_type',
+                'reactable_id',
                 'reaction'
-            ], 'LIKEABLE_TYPE_LIKEABLE_ID_REACTION_INDEX');
+            ], 'REACTABLE_TYPE_REACTABLE_ID_REACTION_INDEX');
             // Optimization index for filtering by reaction type
         });
     }
