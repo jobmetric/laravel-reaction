@@ -1,6 +1,6 @@
 <?php
 
-namespace JobMetric\Like;
+namespace JobMetric\Reaction;
 
 use JobMetric\PackageCore\Exceptions\MigrationFolderNotFoundException;
 use JobMetric\PackageCore\PackageCore;
