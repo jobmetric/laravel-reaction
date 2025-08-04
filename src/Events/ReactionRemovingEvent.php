@@ -4,7 +4,7 @@ namespace JobMetric\Reaction\Events;
 
 use JobMetric\Reaction\Models\Reaction;
 
-class AddReactionEvent
+class ReactionRemovingEvent
 {
     /**
      * Create a new event instance.
