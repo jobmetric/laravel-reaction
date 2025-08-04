@@ -20,8 +20,8 @@ class ReactionFactory extends Factory
     public function definition(): array
     {
         return [
-            'liker_type' => null,
-            'liker_id' => null,
+            'reactor_type' => null,
+            'reactor_id' => null,
             'reactable_type' => null,
             'reactable_id' => null,
             'reaction' => $this->faker->randomElement(['like', 'dislike', 'love', 'angry', 'sad']),
@@ -32,18 +32,18 @@ class ReactionFactory extends Factory
     }
 
     /**
-     * set liker
+     * set reactor
      *
-     * @param string $liker_type
-     * @param int $liker_id
+     * @param string $reactor_type
+     * @param int $reactor_id
      *
      * @return static
      */
-    public function setLiker(string $liker_type, int $liker_id): static
+    public function setLiker(string $reactor_type, int $reactor_id): static
     {
         return $this->state(fn(array $attributes) => [
-            'liker_type' => $liker_type,
-            'liker_id' => $liker_id
+            'reactor_type' => $reactor_type,
+            'reactor_id' => $reactor_id
         ]);
     }
 
