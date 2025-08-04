@@ -10,18 +10,25 @@ use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Query\Builder as BuilderQuery;
+use JobMetric\Reaction\Events\ReactionRemovedEvent;
+use JobMetric\Reaction\Events\ReactionRemovingEvent;
 use JobMetric\Reaction\Exceptions\InvalidReactionSourceException;
 
 /**
  * Class Reaction
  *
- * Represents a user's reaction (like, dislike, etc.) on any model.
+ * Represents a user's reaction (like, dislike, love, etc.) on any reactable model.
+ * This model supports polymorphic relations for both the reacting entity (reactor) and
+ * the target entity (reactable), enabling flexible usage across the application.
+ *
+ * Reactions can be identified either by authenticated users (`reactor_id`) or anonymous devices (`device_id`).
+ * The IP address and source (e.g. 'web', 'app') are also recorded for audit or analytic purposes.
  *
  * @package JobMetric\Reaction
  *
  * @property int $id
- * @property string|null $liker_type The class name of the reacting user (polymorphic).
- * @property int|null $liker_id The ID of the reacting user (polymorphic).
+ * @property string|null $reactor_type The class name of the reacting user (polymorphic).
+ * @property int|null $reactor_id The ID of the reacting user (polymorphic).
  * @property string $reactable_type The class name of the target model being reacted to.
  * @property int $reactable_id The ID of the target model being reacted to.
  * @property string $reaction The type of reaction (e.g. like, dislike, love, etc.).
@@ -32,11 +39,11 @@ use JobMetric\Reaction\Exceptions\InvalidReactionSourceException;
  * @property Carbon|null $created_at Timestamp of creation.
  * @property Carbon|null $updated_at Timestamp of last update.
  *
- * @property-read Model $liker The user or entity who made the reaction.
+ * @property-read Model|null $reactor The user or entity who made the reaction.
  * @property-read Model $reactable The model that was reacted to.
  *
- * @method static Builder|Reaction whereLikerType($value)
- * @method static Builder|Reaction whereLikerId($value)
+ * @method static Builder|Reaction whereReactorType($value)
+ * @method static Builder|Reaction whereReactorId($value)
  * @method static Builder|Reaction whereReactableType($value)
  * @method static Builder|Reaction whereReactableId($value)
  * @method static Builder|Reaction whereReaction($value)
@@ -46,6 +53,9 @@ use JobMetric\Reaction\Exceptions\InvalidReactionSourceException;
  * @method static BuilderQuery|Reaction onlyTrashed()
  * @method static BuilderQuery|Reaction withTrashed()
  * @method static BuilderQuery|Reaction withoutTrashed()
+ *
+ * @method static Builder|Reaction ofReactor(Model $reactor) Scope to filter reactions by the given reactor model.
+ * @method static Builder|Reaction ofReactable(Model $reactable) Scope to filter reactions by the given reactable model.
  */
 class Reaction extends Model
 {
@@ -57,8 +67,8 @@ class Reaction extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'liker_type',
-        'liker_id',
+        'reactor_type',
+        'reactor_id',
         'reactable_type',
         'reactable_id',
         'reaction',
@@ -73,8 +83,8 @@ class Reaction extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'liker_type' => 'string',
-        'liker_id' => 'integer',
+        'reactor_type' => 'string',
+        'reactor_id' => 'integer',
         'reactable_type' => 'string',
         'reactable_id' => 'integer',
         'reaction' => 'string',
@@ -101,12 +111,32 @@ class Reaction extends Model
     protected static function booted(): void
     {
         static::creating(function (Reaction $reaction) {
-            $hasLiker = filled($reaction->liker_id) && filled($reaction->liker_type);
+            if (blank($reaction->ip)) {
+                $reaction->ip = request()->ip();
+            }
+
+            if (blank($reaction->device_id)) {
+                $reaction->device_id = request()->header(config('reaction.headers.device_id'));
+            }
+
+            if (blank($reaction->source)) {
+                $reaction->source = request()->header(config('reaction.headers.source'), 'web');
+            }
+
+            $hasReactor = filled($reaction->reactor_type) && filled($reaction->reactor_id);
             $hasDevice = filled($reaction->device_id);
 
-            if (!$hasLiker && !$hasDevice) {
+            if (!$hasReactor && !$hasDevice) {
                 throw new InvalidReactionSourceException;
             }
+        });
+
+        static::deleting(function (Reaction $reaction) {
+            event(new ReactionRemovingEvent($reaction));
+        });
+
+        static::deleted(function (Reaction $reaction) {
+            event(new ReactionRemovedEvent($reaction));
         });
     }
 
@@ -121,11 +151,11 @@ class Reaction extends Model
     }
 
     /**
-     * Get the parent liker model (morph-to relation).
+     * Get the parent reactor model (morph-to relation).
      *
      * @return MorphTo
      */
-    public function liker(): MorphTo
+    public function reactor(): MorphTo
     {
         return $this->morphTo();
     }
@@ -138,5 +168,90 @@ class Reaction extends Model
     public function reactable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    /**
+     * Scope a query to only include reactions by a specific reactor.
+     *
+     * @param Builder $query
+     * @param Model $reactor
+     *
+     * @return Builder
+     */
+    public function scopeOfReactor(Builder $query, Model $reactor): Builder
+    {
+        return $query->where([
+            'reactor_type' => get_class($reactor),
+            'reactor_id' => $reactor->getKey(),
+        ]);
+    }
+
+    /**
+     * Scope a query to only include reactions for a specific reactable model.
+     *
+     * @param Builder $query
+     * @param Model $reactable
+     *
+     * @return Builder
+     */
+    public function scopeOfReactable(Builder $query, Model $reactable): Builder
+    {
+        return $query->where([
+            'reactable_type' => get_class($reactable),
+            'reactable_id' => $reactable->getKey(),
+        ]);
+    }
+
+    /**
+     * Set the IP address of the reaction.
+     *
+     * If no value is provided explicitly, it will default to the current request's IP address.
+     *
+     * @param string|null $value
+     * @return void
+     */
+    public function setIpAttribute(?string $value): void
+    {
+        $this->attributes['ip'] = $value ?? request()->ip();
+    }
+
+    /**
+     * Set the device ID for the reaction.
+     *
+     * If no value is provided, it attempts to get the device ID from the request header
+     * as defined in the config under `reaction.headers.device_id`.
+     *
+     * @param string|null $value
+     * @return void
+     */
+    public function setDeviceIdAttribute(?string $value): void
+    {
+        $this->attributes['device_id'] = $value ?? request()->header(config('reaction.headers.device_id'));
+    }
+
+    /**
+     * Set the source of the reaction (e.g. 'web', 'app', 'api').
+     *
+     * If no value is provided, it fetches it from the request header using the config key
+     * `reaction.headers.source`, falling back to `'web'` by default.
+     *
+     * @param string|null $value
+     * @return void
+     */
+    public function setSourceAttribute(?string $value): void
+    {
+        $this->attributes['source'] = $value ?? request()->header(config('reaction.headers.source'), 'web');
+    }
+
+    /**
+     * Check if the reaction is of a specific type.
+     *
+     * @param string $type The type of reaction to check (e.g. 'like', 'dislike').
+     *
+     * @return bool
+     */
+    public function isReactedAs(string $type): bool
+    {
+        return $this->reaction === $type;
     }
 }
