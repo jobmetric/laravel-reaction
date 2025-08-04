@@ -15,162 +15,202 @@
 [![MIT License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
-# Reaction for laravel
+# Laravel Reaction
 
-This is a reaction management package for Laravel that you can use in your projects.
+A modern, flexible, and test-covered Laravel package that allows your models to handle **reaction functionality** (like, dislike, love, etc.). This package provides a clean API for both **reactable** (e.g., articles, posts) and **reactor** (e.g., users, devices) models.
 
-## Install via composer
+## 💾 Installation
 
-Run the following command to pull in the latest version:
+Install via composer:
+
 ```bash
 composer require jobmetric/laravel-reaction
 ```
 
-## Documentation
-
-This package evolves every day under constant development and integrates a diverse set of features. It is a must-have asset for Laravel enthusiasts and provides a seamless way to coordinate your projects with like and dislike base models.
-
-In this package, you can use it seamlessly with any model that requires likes and dislikes.
-
-Now let's move on to the main function.
-
->#### Before doing anything, you must migrate after installing the package by composer.
+Then publish and run the migration:
 
 ```bash
 php artisan migrate
 ```
 
-Meet the `HasLike` class, meticulously designed for integration into your model. This class automates essential tasks, ensuring a streamlined process for:
+## ✨ Usage
 
-In the first step, you need to connect this class to your main model.
+### Step 1: Add `HasReaction` to your model (e.g., `Article`)
 
 ```php
-use JobMetric\Reaction\HasLike;
+use JobMetric\Reaction\HasReaction;
 
-class Post extends Model
+class Article extends Model
 {
-    use HasLike;
+    use HasReaction;
 }
 ```
 
-## How is it used?
-
-You can now use the `HasLike` class for your model. The following example shows how to create a new post with a like:
+### Step 2: Add `CanReact` to your reactor model (e.g., `User`)
 
 ```php
-$post = Post::create([
-    'status' => 'published',
-]);
+use JobMetric\Reaction\CanReact;
 
-$user_id = 1;
-
-$post->likeIt($user_id, $type = true);
-```
-
-> The `likeIt` function is used to like the post. The first parameter is the user id, and the second parameter is the type of like. If you want to dislike, you can set it to `false`.
-
-### Now we go to the functions that we have added to our model.
-
-#### likeOne
-
-like has one relationship
-
-#### likes
-
-like has many relationships
-
-#### likeTo
-
-scope locale for select like relationship
-
-#### dislikeTo
-
-scope locale for select disLike relationship
-
-#### likesTo
-
-scope locale for select likes relationship
-
-#### dislikesTo
-
-scope locale for select disLikes relationship
-
-#### likeIt
-
-This function is very important and is used to store user's likes and dislikes.
-
-```php
-$post->likeIt($user_id, $type = true);
-```
-
-> The `likeIt` function is used to like the post. The first parameter is the user id, and the second parameter is the type of like. If you want to dislike, you can set it to `false`.
-> user_id: user id
-> type: like or dislike
-
-#### likeCount
-
-get count of likes
-
-#### dislikeCount
-
-get count of dislikes
-
-#### loadLikeDislikeCount
-
-This function helps to see the number of likes and dislikes of each object and loads it in the desired model.
-
-```php
-$post->loadLikeDislikeCount();
-```
-
-#### loadLikeDislike
-
-load like or disLike after model loaded
-
-> The `loadLikeDislike` function is used to load the likes and dislikes of the object after the model is loaded.
-
-#### loadLikesDislikes
-
-load likes or dislikes after model loaded
-
-> The `loadLikesDislikes` function is used to load the likes and dislikes of the object after the model is loaded.
-
-#### isLikedDislikedBy
-
-is liked or disliked by user
-
-```php
-$type = $post->isLikedDislikedBy($user_id);
-
-if(\JobMetric\Reaction\Enums\LikeTypeEnum::LIKE == $type) {
-    // liked
-} else if(\JobMetric\Reaction\Enums\LikeTypeEnum::DISLIKE == $type) {
-    // disliked
-} else {
-    // not liked or disliked
+class User extends Model
+{
+    use CanReact;
 }
 ```
 
-#### forgetLike
+## ✅ Main Features
 
-forget like or dislike
-
-```php
-$post->forgetLike($user_id);
-```
-
-#### forgetLikes
-
-forget likes or dislikes
+### ➕ Add Reaction
 
 ```php
-$post->forgetLikes();
+$article->addReaction('like', $user); // with user
+$article->addReaction('like', null, ['device_id' => 'abc123']); // anonymous
 ```
 
-## Contributing
+### 🔁 Toggle Reaction
+
+```php
+$article->toggleReaction('like', $user); // Adds if not exists, removes if exists
+```
+
+### ❌ Remove Reaction
+
+```php
+$article->removeReaction('like', $user);
+```
+
+### ❌❌ Remove All Reactions (by user or device)
+
+```php
+$article->removeAllReactions($user); // or pass device_id
+```
+
+### ♻️ Update Reaction
+
+```php
+$article->updateReaction('like', 'dislike', $user);
+```
+
+### ♻️ Restore Deleted Reaction
+
+```php
+$article->restoreReaction('like', $user);
+```
+
+## 📊 Counting and Summary
+
+### Total Reactions
+
+```php
+$article->totalReactions();
+```
+
+### Count by Type
+
+```php
+$article->countReactions('like');
+```
+
+### Reaction Summary
+
+```php
+$article->reactionSummary();
+// returns: ['like' => 3, 'dislike' => 1]
+```
+
+## 🔍 Querying
+
+### Has Reaction?
+
+```php
+$article->hasReaction('like', $user);
+```
+
+### Get Latest Reactions
+
+```php
+$article->latestReactions(5);
+```
+
+### Get Specific Reaction
+
+```php
+$article->reactionTo($user);
+```
+
+## 🧠 Reactor Functions (for User or any model using CanReact)
+
+### Check if Reacted
+
+```php
+$user->hasReactedTo($article);
+```
+
+### Check Specific Reaction
+
+```php
+$user->reactedWithTo('like', $article);
+```
+
+### Get Summary of User Reactions
+
+```php
+$user->reactionSummary(); // ['like' => 3, 'dislike' => 2]
+```
+
+### Get All Reacted Items
+
+```php
+$user->reactedItems(); // Returns models
+$user->reactedItems('like', Article::class);
+```
+
+### Latest Reactions Given
+
+```php
+$user->latestReactionsGiven(10);
+```
+
+## 🧱 Reaction Model Columns
+
+| Field           | Description                                 |
+|-----------------|---------------------------------------------|
+| reactor_type    | Polymorphic class of reactor (e.g., User)   |
+| reactor_id      | ID of the reactor                           |
+| reactable_type  | Polymorphic class of reactable (e.g., Post) |
+| reactable_id    | ID of the reactable                         |
+| reaction        | Reaction type (e.g., like, love, etc.)      |
+| ip              | IP address of reaction                      |
+| device_id       | Optional device identifier                  |
+| source          | Source (e.g., web, app, api)                |
+
+## 🧪 Events
+
+| Event                 | Triggered When               |
+|-----------------------|------------------------------|
+| ReactionAddEvent      | A new reaction is added      |
+| ReactionRemovingEvent | Before a reaction is removed |
+| ReactionRemovedEvent  | After a reaction is removed  |
+
+## 🧼 Pruning Reactions
+
+This package uses SoftDeletes and supports automatic pruning:
+
+```bash
+php artisan model:prune
+```
+
+You can configure the number of days in your config:
+
+```php
+'reaction' => [
+    'prune_days' => 30,
+],
+```
+
+## 🤝 Contributing
 
 Thank you for considering contributing to the Laravel Reaction! The contribution guide can be found in the [CONTRIBUTING.md](https://github.com/jobmetric/laravel-reaction/blob/master/CONTRIBUTING.md).
 
-## License
+## 📄 License
 
-The MIT License (MIT). Please see [License File](https://github.com/jobmetric/laravel-reaction/blob/master/LICENCE.md) for more information.
+This package is open-sourced under the [MIT license](https://github.com/jobmetric/laravel-reaction/blob/master/LICENCE.md).
