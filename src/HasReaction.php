@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Collection;
-use JobMetric\Reaction\Events\AddReactionEvent;
-use JobMetric\Reaction\Events\RemovedReactionEvent;
-use JobMetric\Reaction\Events\RemovingReactionEvent;
+use JobMetric\Reaction\Events\ReactionAddEvent;
+use JobMetric\Reaction\Events\ReactionRemovedEvent;
+use JobMetric\Reaction\Events\ReactionRemovingEvent;
 use JobMetric\Reaction\Models\Reaction;
 
 /**
@@ -32,15 +32,15 @@ trait HasReaction
     }
 
     /**
-     * Add a reaction to the model by a liker or device.
+     * Add a reaction to the model by a reactor or device.
      *
-     * @param string $reaction The name/type of the reaction (e.g., 'like', 'love').
-     * @param Model|null $liker The model that is reacting (e.g., a User).
-     * @param array $options Optional values: ip, device_id, source.
+     * @param string $reaction
+     * @param Model|null $reactor
+     * @param array $options
      *
      * @return Reaction
      */
-    public function addReaction(string $reaction, ?Model $liker = null, array $options = []): Reaction
+    public function addReaction(string $reaction, ?Model $reactor = null, array $options = []): Reaction
     {
         $data = [
             'reaction' => $reaction,
@@ -49,121 +49,112 @@ trait HasReaction
             'source' => $options['source'] ?? null,
         ];
 
-        if ($liker instanceof Model) {
-            $data['liker_type'] = $liker::class;
-            $data['liker_id'] = $liker->getKey();
+        if ($reactor instanceof Model) {
+            $data['reactor_type'] = $reactor::class;
+            $data['reactor_id'] = $reactor->getKey();
         }
 
+        // Try to find existing reaction (by reactor or device, not both)
+        $query = $this->reactions()->where(function ($q) use ($data) {
+            if (isset($data['reactor_type'], $data['reactor_id'])) {
+                $q->where('reactor_type', $data['reactor_type'])
+                    ->where('reactor_id', $data['reactor_id']);
+            } elseif (!empty($data['device_id'])) {
+                $q->where('device_id', $data['device_id']);
+            }
+        });
+
+        /** @var Reaction|null $existing */
+        $existing = $query->first();
+
+        if ($existing) {
+            // Same reaction already exists → skip update
+            if ($existing->reaction === $reaction) {
+                return $existing;
+            }
+
+            // Update reaction type if different
+            $existing->update([
+                'reaction' => $reaction,
+                'ip' => $data['ip'],
+                'device_id' => $data['device_id'],
+                'source' => $data['source'],
+            ]);
+
+            return $existing;
+        }
+
+        // No existing reaction found, create new
         $reaction = $this->reactions()->create($data);
 
-        event(new AddReactionEvent($reaction));
+        event(new ReactionAddEvent($reaction));
 
         return $reaction;
     }
 
     /**
-     * Internal helper to build a reaction query for the given conditions.
+     * Remove a specific reaction from the model.
      *
      * @param string $reaction
-     * @param Model|null $liker
-     * @param string|null $device_id
-     * @param bool $withTrashed Include soft-deleted records if true.
-     *
-     * @return MorphMany
-     */
-    private function findReaction(string $reaction, ?Model $liker = null, ?string $device_id = null, bool $withTrashed = false): MorphMany
-    {
-        $query = $this->reactions();
-
-        if ($withTrashed) {
-            $query->withTrashed();
-        }
-
-        $query->where('reaction', $reaction);
-
-        $query->where(function ($q) use ($liker, $device_id) {
-            if ($liker instanceof Model) {
-                $q->where([
-                    'liker_type' => $liker::class,
-                    'liker_id' => $liker->getKey(),
-                ]);
-            }
-
-            if ($device_id) {
-                $q->orWhere('device_id', $device_id);
-            }
-        });
-
-        return $query;
-    }
-
-    /**
-     * Remove a specific reaction from the model by a liker or device.
-     *
-     * @param string $reaction
-     * @param Model|null $liker
+     * @param Model|null $reactor
      * @param string|null $device_id
      *
-     * @return bool True if deletion was successful.
+     * @return bool
      */
-    public function removeReaction(string $reaction, ?Model $liker = null, ?string $device_id = null): bool
+    public function removeReaction(string $reaction, ?Model $reactor = null, ?string $device_id = null): bool
     {
         /**
-         * @var Reaction|null $reactionModel
+         * @var Reaction $reactionModel
          */
-        $reactionModel = $this->findReaction($reaction, $liker, $device_id)->firstOrFail();
+        $reactionModel = $this->findReaction($reaction, $reactor, $device_id)->firstOrFail();
 
-        event(new RemovingReactionEvent($reactionModel));
+        event(new ReactionRemovingEvent($reactionModel));
 
         $deleted = $reactionModel->delete();
 
-        event(new RemovedReactionEvent($reactionModel));
+        event(new ReactionRemovedEvent($reactionModel));
 
         return $deleted > 0;
     }
 
     /**
-     * Toggle a reaction: add if it doesn't exist, otherwise remove it.
+     * Toggle a reaction.
      *
      * @param string $reaction
-     * @param Model|null $liker
-     * @param array $options Optional values: ip, device_id, source.
+     * @param Model|null $reactor
+     * @param array $options
      *
      * @return Reaction|bool
      */
-    public function toggleReaction(string $reaction, ?Model $liker = null, array $options = []): Reaction|bool
+    public function toggleReaction(string $reaction, ?Model $reactor = null, array $options = []): Reaction|bool
     {
         $device_id = $options['device_id'] ?? null;
 
-        if ($this->hasReaction($reaction, $liker, $device_id)) {
-            return $this->removeReaction($reaction, $liker, $device_id);
+        if ($this->hasReaction($reaction, $reactor, $device_id)) {
+            return $this->removeReaction($reaction, $reactor, $device_id);
         }
 
-        return $this->addReaction($reaction, $liker, $options);
+        return $this->addReaction($reaction, $reactor, $options);
     }
 
     /**
-     * Remove all reactions by a liker or device. Supports force delete.
+     * Remove all reactions by a reactor or device.
      *
-     * @param Model|null $liker
+     * @param Model|null $reactor
      * @param string|null $device_id
-     * @param bool $force If true, permanently delete.
+     * @param bool $force
      *
-     * @return int Number of deleted rows.
+     * @return int
      */
-    public function removeAllReactions(?Model $liker = null, ?string $device_id = null, bool $force = false): int
+    public function removeAllReactions(?Model $reactor = null, ?string $device_id = null, bool $force = false): int
     {
         $query = $this->reactions();
 
-        if ($force) {
-            return $query->forceDelete();
-        }
-
-        $query->where(function ($q) use ($liker, $device_id) {
-            if ($liker instanceof Model) {
+        $query->where(function ($q) use ($reactor, $device_id) {
+            if ($reactor instanceof Model) {
                 $q->where([
-                    'liker_type' => $liker::class,
-                    'liker_id' => $liker->getKey(),
+                    'reactor_type' => $reactor::class,
+                    'reactor_id' => $reactor->getKey(),
                 ]);
             }
 
@@ -172,43 +163,47 @@ trait HasReaction
             }
         });
 
-        return $query->delete();
+        $items = $query->get();
+
+        foreach ($items as $reaction) {
+            $force ? $reaction->forceDelete() : $reaction->delete();
+        }
+
+        return $items->count();
     }
 
     /**
      * Restore a soft-deleted reaction.
      *
      * @param string $reaction
-     * @param Model|null $liker
+     * @param Model|null $reactor
      * @param string|null $device_id
      *
-     * @return bool True if restored.
+     * @return bool
      */
-    public function restoreReaction(string $reaction, ?Model $liker = null, ?string $device_id = null): bool
+    public function restoreReaction(string $reaction, ?Model $reactor = null, ?string $device_id = null): bool
     {
-        $model = $this->findReaction($reaction, $liker, $device_id, true)->onlyTrashed()->first();
+        $model = $this->findReaction($reaction, $reactor, $device_id, true)->onlyTrashed()->first();
 
-        if (!$model) return false;
-
-        return $model->restore();
+        return $model ? $model->restore() : false;
     }
 
     /**
-     * Update the reaction type from one to another.
+     * Update the reaction type.
      *
-     * @param string $from Original reaction type.
-     * @param string $to New reaction type.
-     * @param Model|null $liker
+     * @param string $from
+     * @param string $to
+     * @param Model|null $reactor
      * @param string|null $device_id
      *
      * @return Reaction
      */
-    public function updateReaction(string $from, string $to, ?Model $liker = null, ?string $device_id = null): Reaction
+    public function updateReaction(string $from, string $to, ?Model $reactor = null, ?string $device_id = null): Reaction
     {
         /**
          * @var Reaction|null $existing
          */
-        $existing = $this->findReaction($from, $liker, $device_id)->first();
+        $existing = $this->findReaction($from, $reactor, $device_id)->first();
 
         if ($existing) {
             $existing->update(['reaction' => $to]);
@@ -216,28 +211,28 @@ trait HasReaction
             return $existing;
         }
 
-        return $this->addReaction($to, $liker, ['device_id' => $device_id]);
+        return $this->addReaction($to, $reactor, ['device_id' => $device_id]);
     }
 
     /**
-     * Check if the model has a specific reaction from a liker or device.
+     * Check if a specific reaction exists.
      *
      * @param string $reaction
-     * @param Model|null $liker
+     * @param Model|null $reactor
      * @param string|null $device_id
-     * @param bool $withTrashed Include soft-deleted records if true.
+     * @param bool $withTrashed
      *
      * @return bool
      */
-    public function hasReaction(string $reaction, ?Model $liker = null, ?string $device_id = null, bool $withTrashed = false): bool
+    public function hasReaction(string $reaction, ?Model $reactor = null, ?string $device_id = null, bool $withTrashed = false): bool
     {
-        return $this->findReaction($reaction, $liker, $device_id, $withTrashed)->exists();
+        return $this->findReaction($reaction, $reactor, $device_id, $withTrashed)->exists();
     }
 
     /**
-     * Get the total number of all reactions for the model.
+     * Count all reactions.
      *
-     * @param bool $withTrashed Include soft-deleted records if true.
+     * @param bool $withTrashed
      *
      * @return int
      */
@@ -253,7 +248,7 @@ trait HasReaction
     }
 
     /**
-     * Get the number of reactions of a specific type.
+     * Count reactions of a specific type.
      *
      * @param string $reaction
      *
@@ -265,11 +260,11 @@ trait HasReaction
     }
 
     /**
-     * Get a summary of all reaction types and their counts.
+     * Get summary of all reaction types.
      *
-     * @param bool $withTrashed Include soft-deleted records if true.
+     * @param bool $withTrashed
      *
-     * @return Collection<string, int> A map of reaction name => count.
+     * @return Collection
      */
     public function reactionSummary(bool $withTrashed = false): Collection
     {
@@ -286,10 +281,10 @@ trait HasReaction
     }
 
     /**
-     * Get the latest reactions on the model.
+     * Get the latest reactions.
      *
-     * @param int $limit Maximum number of reactions to retrieve.
-     * @param bool $withTrashed Include soft-deleted reactions if true.
+     * @param int $limit
+     * @param bool $withTrashed
      *
      * @return EloquentCollection
      */
@@ -302,5 +297,41 @@ trait HasReaction
         }
 
         return $query->latest()->take($limit)->get();
+    }
+
+    /**
+     * Internal query builder for a specific reaction.
+     *
+     * @param string $reaction
+     * @param Model|null $reactor
+     * @param string|null $device_id
+     * @param bool $withTrashed
+     *
+     * @return MorphMany
+     */
+    private function findReaction(string $reaction, ?Model $reactor = null, ?string $device_id = null, bool $withTrashed = false): MorphMany
+    {
+        $query = $this->reactions();
+
+        if ($withTrashed) {
+            $query->withTrashed();
+        }
+
+        $query->where('reaction', $reaction);
+
+        $query->where(function ($q) use ($reactor, $device_id) {
+            if ($reactor instanceof Model) {
+                $q->where([
+                    'reactor_type' => $reactor::class,
+                    'reactor_id' => $reactor->getKey(),
+                ]);
+            }
+
+            if ($device_id) {
+                $q->orWhere('device_id', $device_id);
+            }
+        });
+
+        return $query;
     }
 }
