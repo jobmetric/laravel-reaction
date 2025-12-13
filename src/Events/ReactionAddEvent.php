@@ -33,7 +33,7 @@ readonly class ReactionAddEvent implements DomainEvent
      */
     public static function definition(): DomainEventDefinition
     {
-        return new DomainEventDefinition(self::key(), 'reaction::base.events.reaction_added.group', 'reaction::base.events.reaction_added.title', 'reaction::base.events.reaction_added.description', 'fas fa-heart', [
+        return new DomainEventDefinition(self::key(), 'reaction::base.entity_names.reaction', 'reaction::base.events.reaction_added.title', 'reaction::base.events.reaction_added.description', 'fas fa-heart', [
             'reaction',
             'interaction',
             'social',

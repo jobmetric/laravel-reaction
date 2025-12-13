@@ -33,7 +33,7 @@ readonly class ReactionRemovedEvent implements DomainEvent
      */
     public static function definition(): DomainEventDefinition
     {
-        return new DomainEventDefinition(self::key(), 'reaction::base.events.reaction_removed.group', 'reaction::base.events.reaction_removed.title', 'reaction::base.events.reaction_removed.description', 'fas fa-heart-broken', [
+        return new DomainEventDefinition(self::key(), 'reaction::base.entity_names.reaction', 'reaction::base.events.reaction_removed.title', 'reaction::base.events.reaction_removed.description', 'fas fa-heart-broken', [
             'reaction',
             'interaction',
             'social',
