@@ -1,0 +1,37 @@
+name: Feature Request
+description: Suggest a new feature for Laravel Reaction
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a new feature! Please provide the following details to help us understand your request.
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: Feature Description
+      description: A clear and concise description of the feature you want to add.
+      placeholder: Add support for reaction analytics and statistics
+    validations:
+      required: true
+  - type: textarea
+    id: problem-need
+    attributes:
+      label: Problem/Need
+      description: What problem does this feature solve or what need does it address?
+      placeholder: This feature would help track and analyze reaction patterns
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: How do you think this feature should work?
+      placeholder: |
+        Add methods to get reaction statistics
+        Example usage:
+        $article->getReactionStats();
+    validations:
+      required: true
+
