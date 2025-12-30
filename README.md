@@ -17,200 +17,86 @@
 
 # Laravel Reaction
 
-A modern, flexible, and test-covered Laravel package that allows your models to handle **reaction functionality** (like, dislike, love, etc.). This package provides a clean API for both **reactable** (e.g., articles, posts) and **reactor** (e.g., users, devices) models.
+**Build Reactions. Simply and Powerfully.**
 
-## 💾 Installation
+Laravel Reaction simplifies reaction management in Laravel applications. Stop creating separate tables for each reaction type and start building social interaction features with confidence. It provides a modern, flexible package that allows your Eloquent models to handle reaction functionality (like, dislike, love, etc.)—perfect for building social features, engagement systems, and user interaction tracking. This is where powerful reaction management meets developer-friendly simplicity—giving you complete control over user reactions without the complexity.
 
-Install via composer:
+## Why Laravel Reaction?
+
+### Simple API
+
+Laravel Reaction provides a clean, intuitive API for managing reactions. Add, remove, toggle, and query reactions with simple method calls—no complex queries or manual relationship management.
+
+### Flexible Reaction Types
+
+Support any reaction type you need: like, dislike, love, heart, thumbs up, and more. The package doesn't limit you to predefined reaction types—use whatever makes sense for your application.
+
+### Anonymous Reactions
+
+Support both authenticated user reactions and anonymous device-based reactions. Perfect for applications where users can react without logging in, or where you need to track reactions by device.
+
+### Polymorphic Relationships
+
+Use reactions on any Eloquent model through polymorphic relationships. Articles, posts, comments, products—anything can be reactable, and any model can be a reactor.
+
+## What is Reaction Management?
+
+Reaction management is the process of allowing users or devices to express their feelings or opinions about content through reactions. Traditional approaches often involve:
+
+- Creating separate tables for each reaction type (likes, dislikes, etc.)
+- Writing complex queries to check reaction status
+- Managing reaction state manually
+- Duplicating code across different models
+
+Laravel Reaction solves these challenges by providing:
+
+- **Unified System**: Single table for all reaction types
+- **Polymorphic Design**: Works with any model
+- **Simple API**: Clean methods for all operations
+- **Event Integration**: Built-in events for extensibility
+- **Query Helpers**: Easy methods for common queries
+
+Consider a social media platform where users can react to posts with multiple reaction types. With Laravel Reaction, you can add reactions programmatically, track reactions by user or device, get reaction summaries and counts, toggle reactions easily, and integrate with notification systems through events. The power of reaction management lies not only in flexible reaction types but also in making it easy to query, track, and manage throughout your application.
+
+## What Awaits You?
+
+By adopting Laravel Reaction, you will:
+
+- **Build social features** - Add like, dislike, and custom reactions to any content
+- **Simplify reaction management** - Single API for all reaction operations
+- **Support anonymous users** - Track reactions by device without authentication
+- **Improve user engagement** - Easy-to-use reaction system increases interaction
+- **Enable flexible reactions** - Use any reaction type that fits your needs
+- **Maintain clean code** - Simple, intuitive API that follows Laravel conventions
+
+## Quick Start
+
+Install Laravel Reaction via Composer:
 
 ```bash
 composer require jobmetric/laravel-reaction
 ```
 
-Then publish and run the migration:
+## Documentation
 
-```bash
-php artisan migrate
-```
+Ready to transform your Laravel applications? Our comprehensive documentation is your gateway to mastering Laravel Reaction:
 
-## ✨ Usage
+**[📚 Read Full Documentation →](https://jobmetric.github.io/packages/laravel-reaction/)**
 
-### Step 1: Add `HasReaction` to your model (e.g., `Article`)
+The documentation includes:
 
-```php
-use JobMetric\Reaction\HasReaction;
+- **Getting Started** - Quick introduction and installation guide
+- **HasReaction** - Trait for models that can receive reactions
+- **CanReact** - Trait for models that can give reactions
+- **Reaction Model** - Eloquent model for storing reactions
+- **Events** - Hook into reaction lifecycle
+- **Querying** - Methods for counting, summarizing, and filtering reactions
+- **Real-World Examples** - See how it works in practice
 
-class Article extends Model
-{
-    use HasReaction;
-}
-```
+## Contributing
 
-### Step 2: Add `CanReact` to your reactor model (e.g., `User`)
+Thank you for participating in `laravel-reaction`. A contribution guide can be found [here](CONTRIBUTING.md).
 
-```php
-use JobMetric\Reaction\CanReact;
+## License
 
-class User extends Model
-{
-    use CanReact;
-}
-```
-
-## ✅ Main Features
-
-### ➕ Add Reaction
-
-```php
-$article->addReaction('like', $user); // with user
-$article->addReaction('like', null, ['device_id' => 'abc123']); // anonymous
-```
-
-### 🔁 Toggle Reaction
-
-```php
-$article->toggleReaction('like', $user); // Adds if not exists, removes if exists
-```
-
-### ❌ Remove Reaction
-
-```php
-$article->removeReaction('like', $user);
-```
-
-### ❌❌ Remove All Reactions (by user or device)
-
-```php
-$article->removeAllReactions($user); // or pass device_id
-```
-
-### ♻️ Update Reaction
-
-```php
-$article->updateReaction('like', 'dislike', $user);
-```
-
-### ♻️ Restore Deleted Reaction
-
-```php
-$article->restoreReaction('like', $user);
-```
-
-## 📊 Counting and Summary
-
-### Total Reactions
-
-```php
-$article->totalReactions();
-```
-
-### Count by Type
-
-```php
-$article->countReactions('like');
-```
-
-### Reaction Summary
-
-```php
-$article->reactionSummary();
-// returns: ['like' => 3, 'dislike' => 1]
-```
-
-## 🔍 Querying
-
-### Has Reaction?
-
-```php
-$article->hasReaction('like', $user);
-```
-
-### Get Latest Reactions
-
-```php
-$article->latestReactions(5);
-```
-
-### Get Specific Reaction
-
-```php
-$article->reactionTo($user);
-```
-
-## 🧠 Reactor Functions (for User or any model using CanReact)
-
-### Check if Reacted
-
-```php
-$user->hasReactedTo($article);
-```
-
-### Check Specific Reaction
-
-```php
-$user->reactedWithTo('like', $article);
-```
-
-### Get Summary of User Reactions
-
-```php
-$user->reactionSummary(); // ['like' => 3, 'dislike' => 2]
-```
-
-### Get All Reacted Items
-
-```php
-$user->reactedItems(); // Returns models
-$user->reactedItems('like', Article::class);
-```
-
-### Latest Reactions Given
-
-```php
-$user->latestReactionsGiven(10);
-```
-
-## 🧱 Reaction Model Columns
-
-| Field           | Description                                 |
-|-----------------|---------------------------------------------|
-| reactor_type    | Polymorphic class of reactor (e.g., User)   |
-| reactor_id      | ID of the reactor                           |
-| reactable_type  | Polymorphic class of reactable (e.g., Post) |
-| reactable_id    | ID of the reactable                         |
-| reaction        | Reaction type (e.g., like, love, etc.)      |
-| ip              | IP address of reaction                      |
-| device_id       | Optional device identifier                  |
-| source          | Source (e.g., web, app, api)                |
-
-## 🧪 Events
-
-| Event                 | Triggered When               |
-|-----------------------|------------------------------|
-| ReactionAddEvent      | A new reaction is added      |
-| ReactionRemovingEvent | Before a reaction is removed |
-| ReactionRemovedEvent  | After a reaction is removed  |
-
-## 🧼 Pruning Reactions
-
-This package uses SoftDeletes and supports automatic pruning:
-
-```bash
-php artisan model:prune
-```
-
-You can configure the number of days in your config:
-
-```php
-'reaction' => [
-    'prune_days' => 30,
-],
-```
-
-## 🤝 Contributing
-
-Thank you for considering contributing to the Laravel Reaction! The contribution guide can be found in the [CONTRIBUTING.md](https://github.com/jobmetric/laravel-reaction/blob/master/CONTRIBUTING.md).
-
-## 📄 License
-
-This package is open-sourced under the [MIT license](https://github.com/jobmetric/laravel-reaction/blob/master/LICENCE.md).
+The `laravel-reaction` is open-sourced software licensed under the MIT license. See [License File](LICENCE.md) for more information.
