@@ -98,12 +98,18 @@ trait HasLike
                 $this->likeOne()->where('user_id', $user_id)->delete();
 
                 event(new LikeForgetEvent($userLike));
+        if (! $userLike->newQuery()->where($userLike->only(['likeable_type', 'likeable_id', 'user_id']))->exists()) {
+            app(\JobMetric\EventSystem\Support\CommittedEventDispatcher::class)->dispatch(new \JobMetric\Like\Events\Like\LikeDeleteCommittedEvent($userLike->likeable_type, (int) $userLike->likeable_id, (int) $userLike->user_id), $userLike->getConnectionName());
+        }
             } else {
                 $typeData = 'update';
 
                 $this->likeOne()->where('user_id', $user_id)->update(['type' => $type]);
 
                 event(new LikeUpdateEvent($userLike, $type));
+        if (true) {
+            app(\JobMetric\EventSystem\Support\CommittedEventDispatcher::class)->dispatch(new \JobMetric\Like\Events\Like\LikeUpdateCommittedEvent($userLike->likeable_type, (int) $userLike->likeable_id, (int) $userLike->user_id), $userLike->getConnectionName());
+        }
             }
         } else {
             $typeData = 'store';
@@ -114,6 +120,9 @@ trait HasLike
             ]);
 
             event(new LikeStoredEvent($like));
+        if ($like->exists) {
+            app(\JobMetric\EventSystem\Support\CommittedEventDispatcher::class)->dispatch(new \JobMetric\Like\Events\Like\LikeStoreCommittedEvent($like->likeable_type, (int) $like->likeable_id, (int) $like->user_id), $like->getConnectionName());
+        }
         }
 
         return [
@@ -225,6 +234,9 @@ trait HasLike
             $like->delete();
 
             event(new LikeForgetEvent($like));
+        if (! $like->newQuery()->where($like->only(['likeable_type', 'likeable_id', 'user_id']))->exists()) {
+            app(\JobMetric\EventSystem\Support\CommittedEventDispatcher::class)->dispatch(new \JobMetric\Like\Events\Like\LikeDeleteCommittedEvent($like->likeable_type, (int) $like->likeable_id, (int) $like->user_id), $like->getConnectionName());
+        }
         }
 
         return $this;
@@ -244,6 +256,9 @@ trait HasLike
             $like->delete();
 
             event(new LikeForgetEvent($like));
+        if (! $like->newQuery()->where($like->only(['likeable_type', 'likeable_id', 'user_id']))->exists()) {
+            app(\JobMetric\EventSystem\Support\CommittedEventDispatcher::class)->dispatch(new \JobMetric\Like\Events\Like\LikeDeleteCommittedEvent($like->likeable_type, (int) $like->likeable_id, (int) $like->user_id), $like->getConnectionName());
+        }
         });
 
         return $this;

@@ -15,6 +15,21 @@ class LikeServiceProvider extends PackageCoreServiceProvider
     {
         $package->name('laravel-like')
             ->hasConfig()
+            ->hasTranslation()
             ->hasMigration();
+    }
+    /**
+     * Register committed business outcome definitions alongside legacy events.
+     *
+     * @return void
+     */
+    public function afterBootPackage(): void
+    {
+        if ($this->app->bound('EventRegistry')) {
+            $registry = $this->app->make('EventRegistry');
+            $registry->register(\JobMetric\Like\Events\Like\LikeStoreCommittedEvent::class);
+            $registry->register(\JobMetric\Like\Events\Like\LikeUpdateCommittedEvent::class);
+            $registry->register(\JobMetric\Like\Events\Like\LikeDeleteCommittedEvent::class);
+        }
     }
 }
